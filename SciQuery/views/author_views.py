@@ -61,3 +61,39 @@ def delete_author(author_id):
     
     model.delete_author(author_id)
     return success_response(message="Author deleted successfully"), 200
+
+@author_bp.route("/authors/name/<name>", methods=["GET"])
+def get_author_by_name(name):
+    model = AuthorModel()
+    result = model.get_authors_by_similar_name(name)
+    if result:
+        author = result["a"]
+        return success_response(
+            data={"id": author["id"], "name": author["name"]},
+            message="Author retrieved successfully"
+        ), 200
+    return error_response("Author not found", 404)
+
+@author_bp.route("/authors/search", methods=["POST"])
+def search_by_similar_name():
+    data = request.get_json()
+    if not data or "name" not in data:
+        return error_response("Name parameter is required", 400)
+    
+    name = data["name"]
+    model = AuthorModel()
+    results = model.get_authors_by_similar_name(name)
+    
+    if results:
+        authors_data = []
+        for result in results:
+            author = result["a"]
+            authors_data.append({
+                "id": author["id"],
+                "name": author["name"]
+            })
+        return success_response(
+            data=authors_data,
+            message="Authors found successfully"
+        ), 200
+    return error_response("No authors found with similar name", 404)

@@ -38,3 +38,11 @@ class FieldModel:
             DETACH DELETE f
         """
         self.neo4j.query(cypher_query, parameters={"id": field_id})
+
+    def get_field_by_name(self, name):
+        cypher_query = """
+            MATCH (f:Field {name: $name})
+            RETURN f
+        """
+        result = self.neo4j.query(cypher_query, parameters={"name": name})
+        return result[0] if result else None

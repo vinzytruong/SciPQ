@@ -38,3 +38,12 @@ class AuthorModel:
             DETACH DELETE a
         """
         self.neo4j.query(cypher_query, parameters={"id": author_id})
+
+    def get_authors_by_similar_name(self, name):
+        cypher_query = """
+            MATCH (a:Author)
+            WHERE a.name CONTAINS $name
+            RETURN a
+        """
+        results = self.neo4j.query(cypher_query, parameters={"name": name})
+        return results if results else None

@@ -61,3 +61,24 @@ def delete_field(field_id):
     
     model.delete_field(field_id)
     return success_response(message="Field deleted successfully"), 200
+
+@field_bp.route("/fields/search", methods=["POST"])
+def search_by_name():
+    data = request.get_json()
+    if not data or "name" not in data:
+        return error_response("Name parameter is required", 400)
+    
+    name = data["name"]
+    model = FieldModel()
+    result = model.get_field_by_name(name)
+    
+    if result:
+        field = result["f"]
+        return success_response(
+            data={
+                "id": field["id"],
+                "name": field["name"]
+            },
+            message="Field found successfully"
+        ), 200
+    return error_response("No fields found with that name", 404)

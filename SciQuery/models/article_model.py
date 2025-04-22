@@ -5,10 +5,10 @@ class ArticleModel:
     def __init__(self):
         self.neo4j = Neo4jConnection().connect()
 
-    def create_article(self, title, content, publication_date, author_id, field_id):
+    def create_article(self, title, content, author_id, field_id):
         cypher_query = """
             MATCH (a:Author {id: $author_id}), (f:Field {id: $field_id})
-            CREATE (p:Article {id: $id, title: $title, content: $content, publication_date: $publication_date})
+            CREATE (p:Article {id: $id, title: $title, content: $content})
             CREATE (a)-[:WROTE]->(p)
             CREATE (p)-[:BELONGS_TO]->(f)
             RETURN p, a, f
@@ -17,7 +17,6 @@ class ArticleModel:
             "id": str(uuid.uuid4()),
             "title": title,
             "content": content,
-            "publication_date": publication_date,
             "author_id": author_id,
             "field_id": field_id
         }
@@ -43,13 +42,13 @@ class ArticleModel:
         """
         return self.neo4j.query(cypher_query)
 
-    def update_article(self, article_id, title, content, publication_date, author_id, field_id):
+    def update_article(self, article_id, title, content, author_id, field_id):
         cypher_query = """
             MATCH (p:Article {id: $id})
             OPTIONAL MATCH (p)-[r1:WROTE|BELONGS_TO]-()
             DELETE r1
             MATCH (a:Author {id: $author_id}), (f:Field {id: $field_id})
-            SET p.title = $title, p.content = $content, p.publication_date = $publication_date
+            SET p.title = $title, p.content = $content
             CREATE (a)-[:WROTE]->(p)
             CREATE (p)-[:BELONGS_TO]->(f)
             RETURN p, a, f
@@ -58,7 +57,6 @@ class ArticleModel:
             "id": article_id,
             "title": title,
             "content": content,
-            "publication_date": publication_date,
             "author_id": author_id,
             "field_id": field_id
         }
@@ -71,3 +69,14 @@ class ArticleModel:
             DETACH DELETE p
         """
         self.neo4j.query(cypher_query, parameters={"id": article_id})
+
+    def get_articles_by_similar_name(self, title):
+        cypher_query = """
+            MATCH (p:Article)
+            WHERE p.title CONTAINS $title
+            OPTIONAL MATCH (a:Author)-[:WROTE]->(p)
+            OPTIONAL MATCH (p)-[:BELONGS_TO]->(f:Field)
+            RETURN p, a, f
+        """
+        results = self.neo4j.query(cypher_query, parameters={"title": title})
+        return results if results else None
