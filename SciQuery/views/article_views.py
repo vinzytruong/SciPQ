@@ -153,68 +153,82 @@ def create_articles_from_excel():
 
         for index, row in df.iterrows():
             try:
-                # Get or create author
-                author_name = str(row["author_name"]).strip()
-               
-                author_result = author_model.get_authors_by_similar_name(author_name)
-                if not author_result:
-                    author_result = author_model.create_author(author_name)
+                # Xử lý danh sách tác giả
+                author_names = [name.strip() for name in str(row["author_name"]).split(',')]
+                author_ids = []
+                for author_name in author_names:
+                    author_result = author_model.get_authors_by_similar_name(author_name)
                     if not author_result:
-                        failed_articles.append({"row": index + 2, "reason": "Failed to create author"})
-                        continue
-                else:
-                    author_result = author_result[0]  # Assuming the first match is the desired one
-                author_id = author_result["a"]["id"]
+                        author_result = author_model.create_author(author_name)
+                        if not author_result:
+                            failed_articles.append({"row": index + 2, "reason": f"Failed to create author: {author_name}"})
+                            continue
+                    else:
+                        author_result = author_result[0]  # Giả sử dùng kết quả đầu tiên
+                    author_ids.append(author_result["a"]["id"])
                 
-                # Get or create field
-                field_name = str(row["field_name"]).strip()
-                field_result = field_model.get_field_by_name(field_name)
-                if not field_result:
-                    field_result = field_model.create_field(field_name)
+                if not author_ids:
+                    continue
+
+                # Xử lý danh sách lĩnh vực
+                field_names = [f.strip() for f in str(row["field_name"]).split(',')]
+                field_ids = []
+                for field_name in field_names:
+                    field_result = field_model.get_field_by_name(field_name)
                     if not field_result:
-                        failed_articles.append({"row": index + 2, "reason": "Failed to create field"})
-                        continue
-                field_id = field_result["f"]["id"]
+                        field_result = field_model.create_field(field_name)
+                        if not field_result:
+                            failed_articles.append({"row": index + 2, "reason": f"Failed to create field: {field_name}"})
+                            continue
+                    field_ids.append(field_result["f"]["id"])
                 
-                # Create article
+                if not field_ids:
+                    continue
+
+                # Lấy title và content
                 title = str(row["title"]).strip()
                 content = str(row["content"]).strip()
-                
-                result = article_model.create_article(
-                    title,
-                    content,
-                    author_id,
-                    field_id
-                )
-                
-                if result:
-                    article = result["p"]
-                    author = result["a"]
-                    field = result["f"]
-                    created_articles.append({
-                        "id": article["id"],
-                        "title": article["title"],
-                        "content": article["content"],
-                        "author": {"id": author["id"], "name": author["name"]},
-                        "field": {"id": field["id"], "name": field["name"]}
-                    })
-                else:
-                    failed_articles.append({"row": index + 2, "reason": "Failed to create article"})
-                    
+
+                # Tạo bài viết cho mọi tổ hợp (author_id, field_id)
+                for aid in author_ids:
+                    for fid in field_ids:
+                        try:
+                            result = article_model.create_article(title, content, aid, fid)
+                            if result:
+                                article = result["p"]
+                                author = result["a"]
+                                field = result["f"]
+                                created_articles.append({
+                                    "id": article["id"],
+                                    "title": article["title"],
+                                    "content": article["content"],
+                                    "author": {"id": author["id"], "name": author["name"]},
+                                    "field": {"id": field["id"], "name": field["name"]}
+                                })
+                            else:
+                                failed_articles.append({
+                                    "row": index + 2,
+                                    "reason": f"Failed to create article with author_id {aid} and field_id {fid}"
+                                })
+                        except Exception as e:
+                            failed_articles.append({"row": index + 2, "reason": str(e)})
+                            continue
+            
             except Exception as e:
                 failed_articles.append({"row": index + 2, "reason": str(e)})
                 continue
         
         if created_articles:
-            return success_response(data={"created_articles": created_articles, "failed_articles": failed_articles}, message="Articles processed"), 201
+            return success_response(
+                data={"created_articles": created_articles, "failed_articles": failed_articles},
+                message="Articles processed successfully"
+            ), 201
         else:
-            return error_response(
-                message="No articles were created. All rows failed.",
-                status_code=400
-            )
+            return error_response("No articles were created. All rows failed.", 400)
             
     except Exception as e:
         return error_response(f"Error processing Excel file: {str(e)}", 400)
+
 
 @article_bp.route("/articles/search", methods=["GET"])
 def search_by_name():
