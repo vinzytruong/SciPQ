@@ -19,6 +19,18 @@ def create_field():
             message="Field created successfully"
         ), 201
     return error_response("Failed to create field", 500)
+@field_bp.route("/fields", methods=["GET"])
+def get_all_fields():
+    model = FieldModel()
+    results = model.get_all_fields()
+
+    if results:
+        fields = [{"id": field["f"]["id"], "name": field["f"]["name"]} for field in results]
+        return success_response(
+            data=fields,
+            message="Fields retrieved successfully"
+        ), 200
+    return error_response("No fields found", 404)
 
 @field_bp.route("/fields/<field_id>", methods=["GET"])
 def get_field(field_id):

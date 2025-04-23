@@ -62,6 +62,19 @@ def delete_author(author_id):
     model.delete_author(author_id)
     return success_response(message="Author deleted successfully"), 200
 
+@author_bp.route("/authors", methods=["GET"])
+def get_all_fields():
+    model = AuthorModel()
+    results = model.get_all_authors()
+
+    if results:
+        authors = [{"id": author["f"]["id"], "name": author["f"]["name"]} for author in results]
+        return success_response(
+            data=authors,
+            message="Authors retrieved successfully"
+        ), 200
+    return error_response("No authors found", 404)
+
 @author_bp.route("/authors/name/<name>", methods=["GET"])
 def get_author_by_name(name):
     model = AuthorModel()

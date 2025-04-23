@@ -13,7 +13,15 @@ class FieldModel:
         parameters = {"id": str(uuid.uuid4()), "name": name}
         result = self.neo4j.query(cypher_query, parameters)
         return result[0] if result else None
-
+    
+    def get_all_fields(self):
+        cypher_query = """
+            MATCH (f:Field)
+            RETURN f
+        """
+        result = self.neo4j.query(cypher_query)
+        return result
+    
     def get_field(self, field_id):
         cypher_query = """
             MATCH (f:Field {id: $field_id})

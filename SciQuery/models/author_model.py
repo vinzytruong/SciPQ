@@ -13,7 +13,15 @@ class AuthorModel:
         parameters = {"id": str(uuid.uuid4()), "name": name}
         result = self.neo4j.query(cypher_query, parameters)
         return result[0] if result else None
-
+    
+    def get_all_authors(self):
+        cypher_query = """
+            MATCH (f:Author)
+            RETURN f
+        """
+        result = self.neo4j.query(cypher_query)
+        return result
+    
     def get_author(self, author_id):
         cypher_query = """
             MATCH (a:Author {id: $author_id})
