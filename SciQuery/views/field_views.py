@@ -11,6 +11,10 @@ def create_field():
         return error_response("Missing 'name' field", 400)
     
     model = FieldModel()
+    existing_field = model.get_field_by_name(data["name"])
+    if existing_field:
+        return error_response("Field already exists", 400)
+    
     result = model.create_field(data["name"])
     if result:
         field = result["f"]
@@ -74,13 +78,12 @@ def delete_field(field_id):
     model.delete_field(field_id)
     return success_response(message="Field deleted successfully"), 200
 
-@field_bp.route("/fields/search", methods=["POST"])
+@field_bp.route("/fields/search", methods=["GET"])
 def search_by_name():
-    data = request.get_json()
-    if not data or "name" not in data:
-        return error_response("Name parameter is required", 400)
+    name = request.args.get("name")
+    if not name:
+        return error_response("Name query parameter is required", 400)
     
-    name = data["name"]
     model = FieldModel()
     result = model.get_field_by_name(name)
     
