@@ -74,13 +74,12 @@ def get_author_by_name(name):
         ), 200
     return error_response("Author not found", 404)
 
-@author_bp.route("/authors/search", methods=["POST"])
+@author_bp.route("/authors/search", methods=["GET"])
 def search_by_similar_name():
-    data = request.get_json()
-    if not data or "name" not in data:
-        return error_response("Name parameter is required", 400)
+    name = request.args.get("name")
+    if not name:
+        return error_response("Name query parameter is required", 400)
     
-    name = data["name"]
     model = AuthorModel()
     results = model.get_authors_by_similar_name(name)
     

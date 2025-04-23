@@ -126,8 +126,8 @@ def create_articles_from_excel():
         return error_response("No file provided", 400)
     
     file = request.files["file"]
-    if not file.filename.endswith(('.xlsx')):
-        return error_response("Invalid file format. Please upload an Excel file (.xlsx or .xls)", 400)
+    if not file.filename.endswith('.xlsx'):
+        return error_response("Invalid file format. Please upload an Excel file (.xlsx)", 400)
 
     try:
         import pandas as pd
@@ -155,14 +155,16 @@ def create_articles_from_excel():
             try:
                 # Get or create author
                 author_name = str(row["author_name"]).strip()
+               
                 author_result = author_model.get_authors_by_similar_name(author_name)
                 if not author_result:
                     author_result = author_model.create_author(author_name)
-                    print(author_name)
                     if not author_result:
                         failed_articles.append({"row": index + 2, "reason": "Failed to create author"})
                         continue
-                author_id = author_result["id"]
+                else:
+                    author_result = author_result[0]  # Assuming the first match is the desired one
+                author_id = author_result["a"]["id"]
                 
                 # Get or create field
                 field_name = str(row["field_name"]).strip()
@@ -172,7 +174,7 @@ def create_articles_from_excel():
                     if not field_result:
                         failed_articles.append({"row": index + 2, "reason": "Failed to create field"})
                         continue
-                field_id = field_result["id"]
+                field_id = field_result["f"]["id"]
                 
                 # Create article
                 title = str(row["title"]).strip()
@@ -203,45 +205,23 @@ def create_articles_from_excel():
                 failed_articles.append({"row": index + 2, "reason": str(e)})
                 continue
         
-
-        
         if created_articles:
-            return success_response(), 201
+            return success_response(data={"created_articles": created_articles, "failed_articles": failed_articles}, message="Articles processed"), 201
         else:
             return error_response(
                 message="No articles were created. All rows failed.",
-            ), 400
+                status_code=400
+            )
             
     except Exception as e:
         return error_response(f"Error processing Excel file: {str(e)}", 400)
 
-@article_bp.route("/articles/title/<title>", methods=["GET"])
-def get_article_by_title(title):
-    model = ArticleModel()
-    result = model.get_authors_by_similar_name(title)
-    if result:
-        article = result["p"]
-        author = result.get("a", {})
-        field = result.get("f", {})
-        return success_response(
-            data={
-                "id": article["id"],
-                "title": article["title"],
-                "content": article["content"],
-                "author": {"id": author.get("id"), "name": author.get("name")} if author else None,
-                "field": {"id": field.get("id"), "name": field.get("name")} if field else None
-            },
-            message="Article retrieved successfully"
-        ), 200
-    return error_response("Article not found", 404)
-
-@article_bp.route("/articles/search", methods=["POST"])
+@article_bp.route("/articles/search", methods=["GET"])
 def search_by_name():
-    data = request.get_json()
-    if not data or "name" not in data:
-        return error_response("Name parameter is required", 400)
+    name = request.args.get("name")
+    if not name:
+        return error_response("Name query parameter is required", 400)
     
-    name = data["name"]
     model = ArticleModel()
     results = model.get_articles_by_similar_name(name)
     
