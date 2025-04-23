@@ -11,6 +11,10 @@ def create_field():
         return error_response("Missing 'name' field", 400)
     
     model = FieldModel()
+    existing_field = model.get_field_by_name(data["name"])
+    if existing_field:
+        return error_response("Field already exists", 400)
+    
     result = model.create_field(data["name"])
     if result:
         field = result["f"]
