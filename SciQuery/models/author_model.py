@@ -30,6 +30,10 @@ class AuthorModel:
         result = self.neo4j.query(cypher_query, parameters={"author_id": author_id})
         return result[0] if result else None
 
+    def get_author_by_id(self, author_id):
+        # This method fetches the author by their ID
+        return self.get_author(author_id)
+
     def update_author(self, author_id, name):
         cypher_query = """
             MATCH (a:Author {id: $id})

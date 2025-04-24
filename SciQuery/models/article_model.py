@@ -48,6 +48,7 @@ class ArticleModel:
             MATCH (p:Article {id: $id})
             OPTIONAL MATCH (p)-[r1:WROTE|BELONGS_TO]-()
             DELETE r1
+            WITH p
             MATCH (a:Author {id: $author_id}), (f:Field {id: $field_id})
             SET p.title = $title, p.content = $content, p.type = $type
             CREATE (a)-[:WROTE]->(p)
